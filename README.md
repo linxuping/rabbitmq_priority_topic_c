@@ -2,6 +2,7 @@
 rabbitmq with priority and topic functions, you can send items with priorities and received with topics
 
 make sure plugin rabbitmq_priority_queue has installed and make it enable.
+and this demo is base on rabbimq-c library.
 
 see the situation here: 
 you want to use queue to save items with different priorities, for example from 0 - 10, and each time when you insert the higher priority item, it must queue out than some lower ones.
