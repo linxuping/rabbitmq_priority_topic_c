@@ -64,6 +64,15 @@ void die_on_error(int x, char const *context)
   }
 }
 
+int check_error(int x, char const *context, /*out*/char *errinfo, int maxsize)
+{
+  if (x < 0) {
+    snprintf(errinfo, maxsize-1, "%s: %s\n", context, amqp_error_string2(x));
+    return -1;
+  }
+  return 0;
+}
+
 void die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 {
   switch (x.reply_type) {
@@ -105,6 +114,49 @@ void die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 
   exit(1);
 }
+
+int check_amqp_error(amqp_rpc_reply_t x, char const *context, /*out*/char *errinfo, int maxsize)
+{
+  switch (x.reply_type) {
+  case AMQP_RESPONSE_NORMAL:
+    break;
+
+  case AMQP_RESPONSE_NONE:
+    sprintf(errinfo, "%s: missing RPC reply type!\n", context);
+    return -1;
+
+  case AMQP_RESPONSE_LIBRARY_EXCEPTION:
+    snprintf(errinfo, maxsize-1, "%s: %s\n", context, amqp_error_string2(x.library_error));
+    return -1;
+
+  case AMQP_RESPONSE_SERVER_EXCEPTION:
+    switch (x.reply.id) {
+    case AMQP_CONNECTION_CLOSE_METHOD: {
+      amqp_connection_close_t *m = (amqp_connection_close_t *) x.reply.decoded;
+      snprintf(errinfo, maxsize-1, "%s: server connection error %d, message: %.*s\n",
+              context,
+              m->reply_code,
+              (int) m->reply_text.len, (char *) m->reply_text.bytes);
+      return -1;
+    }
+    case AMQP_CHANNEL_CLOSE_METHOD: {
+      amqp_channel_close_t *m = (amqp_channel_close_t *) x.reply.decoded;
+      snprintf(errinfo, maxsize-1, "%s: server channel error %d, message: %.*s\n",
+              context,
+              m->reply_code,
+              (int) m->reply_text.len, (char *) m->reply_text.bytes);
+      return -1;
+    }
+    default:
+      snprintf(errinfo, maxsize-1, "%s: unknown server error, method id 0x%08X\n", context, x.reply.id);
+      return -1;
+    }
+    break;
+  }
+
+  return 0;
+}
+
 
 static void dump_row(long count, int numinrow, int *chs)
 {
