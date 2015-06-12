@@ -8,10 +8,10 @@ int main()
 	BOOL ret;
 
 	ret = rmq_init();
-	rmq_log_set_handler(_rmq_log_write);
-	rmq_log_write("test", RMQ_ERROR);
-	rmq_log_write("hello", RMQ_WARNING);
-	rmq_log_write("world", 20);
+	//rmq_log_set_handler(_rmq_log_write);
+	rmq_log_write("error_info", RMQ_ERROR);
+	rmq_log_write("warning_info", RMQ_WARNING);
+	//rmq_log_write("world", 20);
 
 	rmq_exchange_queues_declare();
 

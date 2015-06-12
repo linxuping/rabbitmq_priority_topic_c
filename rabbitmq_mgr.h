@@ -19,8 +19,14 @@ BOOL rmq_exchange_queues_declare();
 
 /*
  *send with exchange/routingkey/priority.
+ *return doc: for details you can see 'enum amqp_status_enum_' in /usr/local/include/amqp.h 
+ *  AMQP_STATUS_CONNECTION_CLOSED = -0x0007, The connection to the broker has been closed.
+ *  AMQP_STATUS_SOCKET_ERROR = -0x0009, A socket error occurred.
+ *  AMQP_STATUS_TIMEOUT = -0x000D, Operation timed out 
+ *  AMQP_STATUS_SOCKET_CLOSED = -0x0011, Underlying socket is closed. 
+ *  AMQP_STATUS_TCP_ERROR\AMQP_STATUS_TCP_SOCKETLIB_INIT_ERROR and so on. 
  */
-BOOL rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen);
+int rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen);
 
 /*
  *close channel and connection.

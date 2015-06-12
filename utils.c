@@ -66,11 +66,9 @@ void die_on_error(int x, char const *context)
 
 int check_error(int x, char const *context, /*out*/char *errinfo, int maxsize)
 {
-  if (x < 0) {
+  if (x < 0)
     snprintf(errinfo, maxsize-1, "%s: %s\n", context, amqp_error_string2(x));
-    return -1;
-  }
-  return 0;
+  return x;
 }
 
 void die_on_amqp_error(amqp_rpc_reply_t x, char const *context)

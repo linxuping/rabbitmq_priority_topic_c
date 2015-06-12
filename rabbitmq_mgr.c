@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <amqp_tcp_socket.h>
 #include <amqp.h>
+#include <amqp_tcp_socket.h>
 #include <amqp_framing.h>
 #include "utils.h"
 #include "rabbitmq_config.h"
@@ -23,7 +23,7 @@ char g_info[RMQ_LOG_MAXSIZE]; //big enough.
 
 BOOL rmq_init()
 {
-	if (!rmq_log_init()){
+	if (!rmq_log_init(log_path)){
 		printf("[ERROR] init logger failed. please check it.");
 		exit(0);
 	}
@@ -134,25 +134,23 @@ amqp_bytes_t amqp_mystring_bytes(const void *buf, int len)
   return result;
 }
 
-BOOL rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen)
+int rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen)
 {
 	amqp_basic_properties_t props;
 	props._flags = AMQP_BASIC_PRIORITY_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 	props.delivery_mode = 2; /*persistent delivery mode*/
 	props.priority = priority; 
-	if (check_error(amqp_basic_publish(g_conn,
-				1,
-				amqp_cstring_bytes(exchange),
-				amqp_cstring_bytes(routing_key),
-				0,
-				0,
-				&props,
-				amqp_mystring_bytes(sendbuf, sendlen)),
-			"Publishing", g_info, RMQ_LOG_MAXSIZE)){
+	int status = amqp_basic_publish(g_conn,
+					1,
+					amqp_cstring_bytes(exchange),
+					amqp_cstring_bytes(routing_key),
+					0,
+					0,
+					&props,
+					amqp_mystring_bytes(sendbuf, sendlen));
+	if (check_error(status,"Publishing", g_info, RMQ_LOG_MAXSIZE))
 		rmq_log_write(g_info, RMQ_ERROR);
-		return FALSE;
-	}
-	return TRUE;
+	return status;
 }
 
 void rmq_exit()

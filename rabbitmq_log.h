@@ -14,7 +14,7 @@ typedef enum{
 } rmq_log_level;
 typedef void (*rmq_log_handler)(const char*, rmq_log_level level);
 
-BOOL rmq_log_init();
+BOOL rmq_log_init(const char* log_path);
 
 void rmq_log_set_handler(const rmq_log_handler _handler);
 
