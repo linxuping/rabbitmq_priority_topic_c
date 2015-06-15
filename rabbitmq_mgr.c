@@ -150,10 +150,26 @@ int rmq_send(const char* exchange, int priority, const char* routing_key, const 
 					1,
 					amqp_cstring_bytes(exchange),
 					amqp_cstring_bytes(routing_key),
-					0,
-					0,
-					&props,
+					0,0,&props,
 					amqp_mystring_bytes(sendbuf, sendlen));
+	if (check_error(status,"rmq_send failed and try to re-connect", g_info, RMQ_LOG_MAXSIZE)){
+		rmq_log_write(g_info, RMQ_ERROR);
+		if (AMQP_STATUS_CONNECTION_CLOSED==status || 
+					AMQP_STATUS_SOCKET_ERROR==status || 
+					AMQP_STATUS_TIMEOUT==status || 
+					AMQP_STATUS_SOCKET_CLOSED==status ||
+					AMQP_STATUS_TCP_ERROR==status || 
+					AMQP_STATUS_TCP_SOCKETLIB_INIT_ERROR==status){
+			rmq_exit();
+			rmq_init();
+			status = amqp_basic_publish(g_conn,
+							1,
+							amqp_cstring_bytes(exchange),
+							amqp_cstring_bytes(routing_key),
+							0,0,&props,
+							amqp_mystring_bytes(sendbuf, sendlen));
+		}
+	}
 	if (check_error(status,"Publishing", g_info, RMQ_LOG_MAXSIZE))
 		rmq_log_write(g_info, RMQ_ERROR);
 	return status;
