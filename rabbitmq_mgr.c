@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/time.h>
 #include <amqp.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_framing.h>
@@ -18,6 +19,7 @@
 #include "rabbitmq_mgr.h"
 #include "rabbitmq_log.h"
 
+struct timeval g_frame_wait_timeout;
 amqp_connection_state_t g_conn;
 char g_info[RMQ_LOG_MAXSIZE]; //big enough.
 
@@ -56,6 +58,9 @@ BOOL rmq_init()
 		rmq_log_write(g_info, RMQ_ERROR);
 		return FALSE;
 	}
+
+	g_frame_wait_timeout.tv_sec = FRAME_WAIT_TIMEOUT;
+	g_frame_wait_timeout.tv_usec = 0;
 
 	rmq_log_write("New channel and Login successfully.", RMQ_INFO);
 	return TRUE;
@@ -173,6 +178,77 @@ int rmq_send(const char* exchange, int priority, const char* routing_key, const 
 	if (check_error(status,"Publishing", g_info, RMQ_LOG_MAXSIZE))
 		rmq_log_write(g_info, RMQ_ERROR);
 	return status;
+}
+
+int fetch_body(amqp_connection_state_t conn, char *buf, amqp_basic_properties_t** props, int bodysize)
+{
+	size_t body_remaining;
+	amqp_frame_t frame;
+
+	int res = amqp_simple_wait_frame_noblock(conn, &frame, &g_frame_wait_timeout);
+	//die_amqp_error(res, "waiting for header frame");
+	if (check_error(res, "waiting for header frame", g_info, RMQ_LOG_MAXSIZE)){
+		rmq_log_write(g_info, RMQ_ERROR);
+		return -1;
+	}
+
+	if (frame.frame_type != AMQP_FRAME_HEADER) {
+		//die("expected header, got frame type 0x%X",frame.frame_type);
+		sprintf(g_info, "expected header, got frame type 0x%X",frame.frame_type);
+		rmq_log_write(g_info, RMQ_ERROR);
+		return -1;
+	}
+
+	if (frame.payload.properties.class_id == 60){
+		*props = (amqp_basic_properties_t *)frame.payload.properties.decoded;
+	}
+	else{
+		sprintf(g_info, "error to get properties for priority. class_id:%d",frame.payload.properties.class_id);
+		rmq_log_write(g_info, RMQ_WARNING);
+	}
+
+	body_remaining = frame.payload.properties.body_size;
+	if (body_remaining > bodysize){
+			//die("current size:%d, exceed body defined size %d", frame.frame_type, QUEUE_ITEM_BODY_SIZE);
+			sprintf(g_info, "current size:%d, exceed body defined size %d", frame.frame_type, bodysize);
+			rmq_log_write(g_info, RMQ_ERROR);
+			return -1;
+	}
+	while (body_remaining) {
+		res = amqp_simple_wait_frame(conn, &frame);
+		//die_amqp_error(res, "waiting for body frame");
+		if (check_error(res, "waiting for body frame", g_info, RMQ_LOG_MAXSIZE)) 
+			rmq_log_write(g_info, RMQ_ERROR);
+		if (frame.frame_type != AMQP_FRAME_BODY) {
+			//die("expected body, got frame type 0x%X", frame.frame_type);
+			sprintf(g_info, "expected body, got frame type 0x%X", frame.frame_type);
+			rmq_log_write(g_info, RMQ_ERROR);
+			return -1;
+		}
+
+		memcpy(buf+strlen(buf), frame.payload.body_fragment.bytes, frame.payload.body_fragment.len);
+		buf[frame.payload.body_fragment.len] = '\0';
+		body_remaining -= frame.payload.body_fragment.len;
+	}
+	return 0;
+}
+
+int rmq_get(const char *qname, char *buf, int bufsize/*size=QUEUE_ITEM_BODY_SIZE*/)
+{
+	int ret;
+	amqp_rpc_reply_t t;
+	//char buf[QUEUE_ITEM_BODY_SIZE];
+	amqp_basic_properties_t *props;
+	buf[0] = '\0';
+	t = amqp_basic_get(g_conn, 1, amqp_cstring_bytes(qname), 1);
+	//die_rpc(t, "basic.get");
+	if (check_amqp_error(t, "basic.get", g_info, RMQ_LOG_MAXSIZE)){
+		rmq_log_write(g_info, RMQ_ERROR);
+		return t.reply_type;
+	}
+
+	ret = fetch_body(g_conn, buf, &props, bufsize);
+	return ret;
 }
 
 void rmq_exit()

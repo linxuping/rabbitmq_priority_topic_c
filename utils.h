@@ -36,6 +36,9 @@
  * SOFTWARE.
  * ***** END LICENSE BLOCK *****
  */
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
 
 void die(const char *fmt, ...);
 extern void die_on_error(int x, char const *context);
@@ -47,5 +50,10 @@ extern void amqp_dump(void const *buffer, size_t len);
 
 extern uint64_t now_microseconds(void);
 extern void microsleep(int usec);
+
+extern const char *amqp_rpc_reply_string(amqp_rpc_reply_t r);
+extern void die_rpc(amqp_rpc_reply_t r, const char *fmt, ...);
+extern void die_errno(int err, const char *fmt, ...);
+extern void die_amqp_error(int err, const char *fmt, ...);
 
 #endif

@@ -242,3 +242,103 @@ void amqp_dump(void const *buffer, size_t len)
     printf("%08lX:\n", count);
   }
 }
+
+const char *amqp_server_exception_string(amqp_rpc_reply_t r)
+{
+	int res;
+	static char s[512];
+
+	switch (r.reply.id) {
+		case AMQP_CONNECTION_CLOSE_METHOD: {
+							amqp_connection_close_t *m
+								 = (amqp_connection_close_t *)r.reply.decoded;
+							res = snprintf(s, sizeof(s), "server connection error %d, message: %.*s",
+									m->reply_code,
+									(int)m->reply_text.len,
+									(char *)m->reply_text.bytes);
+							break;
+						}
+
+		case AMQP_CHANNEL_CLOSE_METHOD: {
+							amqp_channel_close_t *m
+								= (amqp_channel_close_t *)r.reply.decoded;
+							res = snprintf(s, sizeof(s), "server channel error %d, message: %.*s",
+									m->reply_code,
+									(int)m->reply_text.len,
+									(char *)m->reply_text.bytes);
+							break;
+						}
+
+		default:
+						res = snprintf(s, sizeof(s), "unknown server error, method id 0x%08X",
+								r.reply.id);
+						break;
+	}
+
+	return res >= 0 ? s : NULL;
+}
+
+const char *amqp_rpc_reply_string(amqp_rpc_reply_t r)
+{
+	switch (r.reply_type) {
+		case AMQP_RESPONSE_NORMAL:
+			return "normal response";
+
+		case AMQP_RESPONSE_NONE:
+			return "missing RPC reply type";
+
+		case AMQP_RESPONSE_LIBRARY_EXCEPTION:
+			return amqp_error_string2(r.library_error);
+
+		case AMQP_RESPONSE_SERVER_EXCEPTION:
+			return amqp_server_exception_string(r);
+
+		default:
+			abort();
+	}
+}
+
+void die_rpc(amqp_rpc_reply_t r, const char *fmt, ...)
+{
+	va_list ap;
+
+	if (r.reply_type == AMQP_RESPONSE_NORMAL) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fprintf(stderr, ": %s\n", amqp_rpc_reply_string(r));
+	exit(1);
+} 
+void die_errno(int err, const char *fmt, ...)
+{
+	va_list ap;
+
+	if (err == 0) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fprintf(stderr, ": %s\n", strerror(err));
+	exit(1);
+}
+
+void die_amqp_error(int err, const char *fmt, ...)
+{
+	va_list ap;
+
+	if (err >= 0) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fprintf(stderr, ": %s\n", amqp_error_string2(err));
+	exit(1);
+}
+

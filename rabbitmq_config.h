@@ -5,6 +5,8 @@
 #define RMQ_ITEMS     8    //rmq_exchange_queues配置项{exchange,qname1,...}对应的数组最大size
 #define RMQ_ITEM_SIZE 24   //rmq_exchange_queues配置项{exchange,qname1,...}对应的item size
 #define FRAME_MAX     131072 
+#define QUEUE_ITEM_BODY_SIZE  4096 //队列条目的body最大size
+#define FRAME_WAIT_TIMEOUT    12   //获取队列条目超时时间
 #define PRIORITY_MAX  10   //定义优先级范围(0到PRIORITY_MAX)，数字越大优先级越高.
 const char *log_path   = "log/rabbitmq.log"; //独立的rabbitmq-c接口日志，可以通过rmq_log_set_handler使用自定义日志接口.
 //end.

@@ -29,6 +29,17 @@ BOOL rmq_exchange_queues_declare();
 int rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen);
 
 /*
+ *get one item from queue with name qname.
+ *return:
+ * -1: get body from frame failed. 
+ * AMQP_RESPONSE_NONE = 0,         //< the library got an EOF from the socket 
+ * AMQP_RESPONSE_NORMAL,           //< response normal, the RPC completed successfully 
+ * AMQP_RESPONSE_LIBRARY_EXCEPTION,//< library error, an error occurred in the library, examine the library_error 
+ * AMQP_RESPONSE_SERVER_EXCEPTION  //< server exception, the broker returned an error, check replay 
+ */
+int rmq_get(const char *qname, char *buf, int buflen);
+
+/*
  *close channel and connection.
  */
 void rmq_exit();
