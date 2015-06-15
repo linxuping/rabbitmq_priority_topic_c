@@ -1,9 +1,14 @@
+/*
+ *doc related: /resource_gather/rabbitmq/doc/数据协议.xlsx (汇总的详细的说明文档)
+ */
+
 //internal.configs
 #define RMQ_ITEMS     8
 #define RMQ_ITEM_SIZE 24 
 #define FRAME_MAX     131072
 #define PRIORITY_MAX  10
 const char *log_path   = "log/rabbitmq.log";
+//end.
 
 
 //external.configs
@@ -24,8 +29,10 @@ const char rmq_topics[][RMQ_ITEMS][RMQ_ITEM_SIZE] = {
 	{"ge_check", "ge_check.#"},
 	{"jb_check", "#.jb_check"},
 };
+//end.
 
 
+//test configs.
 /*lxp.test for test.c
 const char rmq_exchange_queues[][RMQ_ITEMS][RMQ_ITEM_SIZE] = { 
 	//{exchange, qname1, qname2 ...}
@@ -38,4 +45,5 @@ const char rmq_topics[][RMQ_ITEMS][RMQ_ITEM_SIZE] = {
 	{"linxpq2", "#.jailbreak"},
 };
 */
+//end.
 
