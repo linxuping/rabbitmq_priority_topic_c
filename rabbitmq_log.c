@@ -14,7 +14,7 @@ BOOL rmq_log_init(const char* log_path)
 		return TRUE;
 	g_logger = fopen(log_path, "at+");
 	if (g_logger == NULL){
-		printf("open rabbitmq.log error. ");
+		printf("open rabbitmq.log error. %s\n",strerror(errno));
 		return FALSE;
 	}
 	return TRUE;
@@ -26,15 +26,17 @@ void rmq_log_set_handler(const rmq_log_handler _handler){
 
 void _rmq_log_write(const char* str, rmq_log_level level)
 {
-	char desc[16];
+	char desc[16], buf[1024];
+	time_t nowtime;
+	struct tm *now;
+
 	if (level>=0 && level<=3)
 		strcpy(desc, rmq_log_level_desc[level]);
 	else
 		strcpy(desc, rmq_log_level_desc[0]);
 
-	time_t nowtime = time(NULL);  
-	struct tm *now = localtime(&nowtime);  
-	char buf[1024];
+	nowtime = time(NULL);  
+	now = localtime(&nowtime);  
 	memset(buf, 0, 1024);
 	sprintf(buf, "[%04d-%02d-%02d %02d:%02d:%02d] [%s.]%s\n",now->tm_year+1900, now->tm_mon+1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec, desc, str);
 	fwrite(buf, strlen(buf)+1, 1, g_logger);

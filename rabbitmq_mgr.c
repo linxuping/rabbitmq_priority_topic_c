@@ -23,27 +23,30 @@ char g_info[RMQ_LOG_MAXSIZE]; //big enough.
 
 BOOL rmq_init()
 {
+	amqp_socket_t *socket;
+	int status;
+
 	if (!rmq_log_init(log_path)){
 		printf("[ERROR] init logger failed. please check it.");
 		exit(0);
 	}
 	g_conn = amqp_new_connection();
 
-	amqp_socket_t *socket = amqp_tcp_socket_new(g_conn);
+	socket = amqp_tcp_socket_new(g_conn);
 	if (!socket){ 
 		amqp_channel_close(g_conn, 1, AMQP_REPLY_SUCCESS); 
 		rmq_log_write_errno("creating TCP socket");//die("creating TCP socket"); //log.err
 		return FALSE;
 	}
 
-	int status = amqp_socket_open(socket, rmq_hostname, rmq_port);
+	status = amqp_socket_open(socket, rmq_hostname, rmq_port);
 	if (status){
 		amqp_channel_close(g_conn, 1, AMQP_REPLY_SUCCESS); 
 		rmq_log_write_errno("opening TCP socket");
 		return FALSE;
 	}
 
-	if (check_amqp_error(amqp_login(g_conn, "/", 0, FRAME_MAX, 0, AMQP_SASL_METHOD_PLAIN, rmq_username, rmq_passwd), 
+	if (check_amqp_error(amqp_login(g_conn, "/", 0, FRAME_MAX, rmq_heartbeat, AMQP_SASL_METHOD_PLAIN, rmq_username, rmq_passwd), 
 				"Logging in", g_info, RMQ_LOG_MAXSIZE)){
 		rmq_log_write(g_info, RMQ_ERROR);
 		return FALSE;
@@ -63,6 +66,8 @@ BOOL rmq_exchange_queues_declare()
 	int i,j,m,n, count = 0;
 	amqp_bytes_t queuename;
 	char *exchange;
+	int conf_item_count, topic_item_count;
+	amqp_queue_declare_ok_t *r;
 
 	amqp_table_entry_t inner_entries[1];
 	amqp_table_t inner_table;
@@ -72,8 +77,8 @@ BOOL rmq_exchange_queues_declare()
 	inner_table.num_entries = 1;
 	inner_table.entries = inner_entries;
 
-	int conf_item_count = sizeof(rmq_exchange_queues)/(RMQ_ITEMS*RMQ_ITEM_SIZE);
-	int topic_item_count = sizeof(rmq_topics)/(RMQ_ITEMS*RMQ_ITEM_SIZE);
+	conf_item_count = sizeof(rmq_exchange_queues)/(RMQ_ITEMS*RMQ_ITEM_SIZE);
+	topic_item_count = sizeof(rmq_topics)/(RMQ_ITEMS*RMQ_ITEM_SIZE);
 	for (i=0; i<conf_item_count; ++i){
 		exchange = (char*)rmq_exchange_queues[i][0];
 		if (strlen(exchange) <= 0)
@@ -93,7 +98,7 @@ BOOL rmq_exchange_queues_declare()
 				break;
 
 			queuename = amqp_cstring_bytes(rmq_exchange_queues[i][j]);
-			amqp_queue_declare_ok_t *r = amqp_queue_declare(g_conn, 1, queuename, 0, 1, 0, 0, inner_table);
+			r = amqp_queue_declare(g_conn, 1, queuename, 0, 1, 0, 0, inner_table);
 			if (check_amqp_error(amqp_get_rpc_reply(g_conn), "Declaring queue", g_info, RMQ_LOG_MAXSIZE)){
 					rmq_log_write(g_info, RMQ_ERROR);
 					return FALSE;
@@ -136,11 +141,12 @@ amqp_bytes_t amqp_mystring_bytes(const void *buf, int len)
 
 int rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen)
 {
+	int status;
 	amqp_basic_properties_t props;
 	props._flags = AMQP_BASIC_PRIORITY_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 	props.delivery_mode = 2; /*persistent delivery mode*/
 	props.priority = priority; 
-	int status = amqp_basic_publish(g_conn,
+	status = amqp_basic_publish(g_conn,
 					1,
 					amqp_cstring_bytes(exchange),
 					amqp_cstring_bytes(routing_key),

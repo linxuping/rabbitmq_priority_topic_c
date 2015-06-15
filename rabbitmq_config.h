@@ -11,10 +11,11 @@ const char *rmq_hostname = "192.168.102.50";
 const int   rmq_port     = 5672;
 const char *rmq_username = "teiron";
 const char *rmq_passwd   = "teiron";
+const int  rmq_heartbeat = 60;//Detecting Dead TCP Connections
 
 const char rmq_exchange_queues[][RMQ_ITEMS][RMQ_ITEM_SIZE] = { 
 	//{exchange, qname1, qname2 ...}
-	{"app_collection", "ap_check", "ge_check", "jb_check"},
+	{"app_collect", "ap_check", "ge_check", "jb_check"},
 };
 
 const char rmq_topics[][RMQ_ITEMS][RMQ_ITEM_SIZE] = { 
