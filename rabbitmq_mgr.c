@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <sys/time.h>
 #include <amqp.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_framing.h>
@@ -18,6 +17,15 @@
 #include "rabbitmq_config.h"
 #include "rabbitmq_mgr.h"
 #include "rabbitmq_log.h"
+
+#ifndef WIN32
+#include <sys/time.h>
+#else
+struct timeval {
+	long	tv_sec;  /* seconds */
+	long	tv_usec;  /* and microseconds */
+};
+#endif
 
 struct timeval g_frame_wait_timeout;
 amqp_connection_state_t g_conn;

@@ -1,3 +1,4 @@
+#ifndef WIN32
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -56,4 +57,6 @@ void test_get()
 
 	rmq_exit();
 }
+
+#endif
 
