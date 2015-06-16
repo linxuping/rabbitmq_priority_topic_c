@@ -188,10 +188,11 @@ int rmq_send(const char* exchange, int priority, const char* routing_key, const 
 	return status;
 }
 
-int fetch_body(amqp_connection_state_t conn, char *buf, amqp_basic_properties_t** props, int bodysize)
+int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t** props, int bodysize)
 {
 	size_t body_remaining;
 	amqp_frame_t frame;
+	int tmplen = 0;
 
 	int res = amqp_simple_wait_frame_noblock(conn, &frame, &g_frame_wait_timeout);
 	//die_amqp_error(res, "waiting for header frame");
@@ -234,20 +235,22 @@ int fetch_body(amqp_connection_state_t conn, char *buf, amqp_basic_properties_t*
 			return -1;
 		}
 
-		memcpy(buf+strlen(buf), frame.payload.body_fragment.bytes, frame.payload.body_fragment.len);
-		buf[frame.payload.body_fragment.len] = '\0';
+		//memcpy(buf+strlen(buf), frame.payload.body_fragment.bytes, frame.payload.body_fragment.len);
+		memcpy((char*)buf+tmplen, frame.payload.body_fragment.bytes, frame.payload.body_fragment.len);
+		tmplen += frame.payload.body_fragment.len;
+		//buf[frame.payload.body_fragment.len] = '\0';
 		body_remaining -= frame.payload.body_fragment.len;
 	}
 	return 0;
 }
 
-int rmq_get(const char *qname, char *buf, int bufsize/*size=QUEUE_ITEM_BODY_SIZE*/)
+int rmq_get(const char *qname, void *buf, int bufsize/*size=QUEUE_ITEM_BODY_SIZE*/)
 {
 	int ret;
 	amqp_rpc_reply_t t;
 	//char buf[QUEUE_ITEM_BODY_SIZE];
 	amqp_basic_properties_t *props;
-	buf[0] = '\0';
+	//buf[0] = '\0';
 	t = amqp_basic_get(g_conn, 1, amqp_cstring_bytes(qname), 1);
 	//die_rpc(t, "basic.get");
 	if (check_amqp_error(t, "basic.get", g_info, RMQ_LOG_MAXSIZE)){
@@ -255,6 +258,7 @@ int rmq_get(const char *qname, char *buf, int bufsize/*size=QUEUE_ITEM_BODY_SIZE
 		return t.reply_type;
 	}
 
+	memset(buf, 0, bufsize);
 	ret = fetch_body(g_conn, buf, &props, bufsize);
 	return ret;
 }
