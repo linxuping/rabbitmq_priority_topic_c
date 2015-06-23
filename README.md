@@ -8,4 +8,9 @@ see the situation here:
 you want to use queue to save items with different priorities, for example from 0 - 10, and each time when you insert the higher priority item, it must queue out than some lower ones.
 and what's more, the output of priority queue have more selections which call 'exchange-topic' in rabbitmq，just see the offcial docs. 
 
++---- how to use ----+
++rabbitmq version: 3.5.3
++rabbitmq-c version: 0.6.0 
++compile:
+gcc test.c -lrabbitmq utils.c rabbitmq_mgr.c rabbitmq_log.c
 
