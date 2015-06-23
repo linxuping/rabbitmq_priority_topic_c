@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <amqp.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_framing.h>
@@ -29,12 +30,12 @@ struct timeval {
 
 struct timeval g_frame_wait_timeout;
 amqp_connection_state_t g_conn;
-char g_info[RMQ_LOG_MAXSIZE]; //big enough.
 
 BOOL rmq_init()
 {
 	amqp_socket_t *socket;
 	int status;
+	char _buf[RMQ_LOG_MAXSIZE]; //big enough.
 
 	if (!rmq_log_init(log_path)){
 		printf("[ERROR] init logger failed. please check it.");
@@ -57,13 +58,13 @@ BOOL rmq_init()
 	}
 
 	if (check_amqp_error(amqp_login(g_conn, "/", 0, FRAME_MAX, rmq_heartbeat, AMQP_SASL_METHOD_PLAIN, rmq_username, rmq_passwd), 
-				"Logging in", g_info, RMQ_LOG_MAXSIZE)){
-		rmq_log_write(g_info, RMQ_ERROR);
+				"Logging in", _buf, RMQ_LOG_MAXSIZE)){
+		rmq_log_write(_buf, RMQ_ERROR);
 		return FALSE;
 	}
 	amqp_channel_open(g_conn, 1);
-	if (check_amqp_error(amqp_get_rpc_reply(g_conn), "Opening channel", g_info, RMQ_LOG_MAXSIZE)){
-		rmq_log_write(g_info, RMQ_ERROR);
+	if (check_amqp_error(amqp_get_rpc_reply(g_conn), "Opening channel", _buf, RMQ_LOG_MAXSIZE)){
+		rmq_log_write(_buf, RMQ_ERROR);
 		return FALSE;
 	}
 
@@ -81,6 +82,7 @@ BOOL rmq_exchange_queues_declare()
 	char *exchange;
 	int conf_item_count, topic_item_count;
 	amqp_queue_declare_ok_t *r;
+	char _buf[RMQ_LOG_MAXSIZE]; //big enough.
 
 	amqp_table_entry_t inner_entries[1];
 	amqp_table_t inner_table;
@@ -98,13 +100,13 @@ BOOL rmq_exchange_queues_declare()
 			break;
 
 		amqp_exchange_declare(g_conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes("topic"),
-				0, 0, 0, 0, amqp_empty_table);
-		if (check_amqp_error(amqp_get_rpc_reply(g_conn), "Declaring exchange", g_info, RMQ_LOG_MAXSIZE)){
-				rmq_log_write(g_info, RMQ_ERROR);
+				0, 1, 0, 0, amqp_empty_table);
+		if (check_amqp_error(amqp_get_rpc_reply(g_conn), "Declaring exchange", _buf, RMQ_LOG_MAXSIZE)){
+				rmq_log_write(_buf, RMQ_ERROR);
 				return FALSE;
 		}
-		sprintf(g_info, "bind exchange successfully. exchange:%s", rmq_exchange_queues[i][0]);
-		rmq_log_write(g_info, RMQ_INFO);
+		sprintf(_buf, "bind exchange successfully. exchange:%s", rmq_exchange_queues[i][0]);
+		rmq_log_write(_buf, RMQ_INFO);
 
 		for (j=1; j<RMQ_ITEMS; ++j){
 			if (strlen(rmq_exchange_queues[i][j]) <= 0) 
@@ -112,8 +114,8 @@ BOOL rmq_exchange_queues_declare()
 
 			queuename = amqp_cstring_bytes(rmq_exchange_queues[i][j]);
 			r = amqp_queue_declare(g_conn, 1, queuename, 0, 1, 0, 0, inner_table);
-			if (check_amqp_error(amqp_get_rpc_reply(g_conn), "Declaring queue", g_info, RMQ_LOG_MAXSIZE)){
-					rmq_log_write(g_info, RMQ_ERROR);
+			if (check_amqp_error(amqp_get_rpc_reply(g_conn), "Declaring queue", _buf, RMQ_LOG_MAXSIZE)){
+					rmq_log_write(_buf, RMQ_ERROR);
 					return FALSE;
 			}
 
@@ -135,8 +137,8 @@ BOOL rmq_exchange_queues_declare()
 					amqp_queue_bind(g_conn, 1, queuename, amqp_cstring_bytes(exchange), 
 													amqp_cstring_bytes(rmq_topics[n][m]),amqp_empty_table);
 					//printf("bind  %s - %s \n",rmq_exchange_queues[i][j],rmq_topics[n][m] ); log.info
-					sprintf(g_info, "bind queue successfully. queue:%s topic:%s", rmq_exchange_queues[i][j],rmq_topics[n][m]);
-					rmq_log_write(g_info, RMQ_INFO);
+					sprintf(_buf, "bind queue successfully. queue:%s topic:%s", rmq_exchange_queues[i][j],rmq_topics[n][m]);
+					rmq_log_write(_buf, RMQ_INFO);
 				}	
 			}
 		}
@@ -154,7 +156,9 @@ amqp_bytes_t amqp_mystring_bytes(const void *buf, int len)
 
 int rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen)
 {
+	char _buf[RMQ_LOG_MAXSIZE],tmpbuf[128]; //big enough.
 	int status;
+	int i;
 	amqp_basic_properties_t props;
 	props._flags = AMQP_BASIC_PRIORITY_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 	props.delivery_mode = 2; /*persistent delivery mode*/
@@ -165,46 +169,53 @@ int rmq_send(const char* exchange, int priority, const char* routing_key, const 
 					amqp_cstring_bytes(routing_key),
 					0,0,&props,
 					amqp_mystring_bytes(sendbuf, sendlen));
-	if (check_error(status,"rmq_send failed and try to re-connect", g_info, RMQ_LOG_MAXSIZE)){
-		rmq_log_write(g_info, RMQ_ERROR);
-		if (AMQP_STATUS_CONNECTION_CLOSED==status || 
-					AMQP_STATUS_SOCKET_ERROR==status || 
-					AMQP_STATUS_TIMEOUT==status || 
-					AMQP_STATUS_SOCKET_CLOSED==status ||
-					AMQP_STATUS_TCP_ERROR==status || 
-					AMQP_STATUS_TCP_SOCKETLIB_INIT_ERROR==status){
-			rmq_exit();
-			rmq_init();
-			status = amqp_basic_publish(g_conn,
-							1,
-							amqp_cstring_bytes(exchange),
-							amqp_cstring_bytes(routing_key),
-							0,0,&props,
-							amqp_mystring_bytes(sendbuf, sendlen));
+	for (i=0; i<RECONNECT_RETRY_TIMES; ++i){
+		sprintf(tmpbuf, "rmq_send failed and try to re-connect.%d", i);
+		if (check_error(status, tmpbuf, _buf, RMQ_LOG_MAXSIZE)){
+			rmq_log_write(_buf, RMQ_ERROR);
+			if (AMQP_STATUS_CONNECTION_CLOSED==status || 
+						AMQP_STATUS_SOCKET_ERROR==status || 
+						AMQP_STATUS_TIMEOUT==status || 
+						AMQP_STATUS_SOCKET_CLOSED==status ||
+						AMQP_STATUS_TCP_ERROR==status || 
+						AMQP_STATUS_TCP_SOCKETLIB_INIT_ERROR==status){
+				sleep(RECONNECT_TIME);
+				rmq_exit();
+				rmq_init();
+				status = amqp_basic_publish(g_conn,
+								1,
+								amqp_cstring_bytes(exchange),
+								amqp_cstring_bytes(routing_key),
+								0,0,&props,
+								amqp_mystring_bytes(sendbuf, sendlen));
+			}
 		}
+		else
+			break;
 	}
-	if (check_error(status,"Publishing", g_info, RMQ_LOG_MAXSIZE))
-		rmq_log_write(g_info, RMQ_ERROR);
+	if (check_error(status,"Publishing", _buf, RMQ_LOG_MAXSIZE))
+		rmq_log_write(_buf, RMQ_ERROR);
 	return status;
 }
 
 int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t** props, int bodysize)
 {
+	char _buf[RMQ_LOG_MAXSIZE]; //big enough.
 	size_t body_remaining;
 	amqp_frame_t frame;
 	int tmplen = 0;
 
 	int res = amqp_simple_wait_frame_noblock(conn, &frame, &g_frame_wait_timeout);
 	//die_amqp_error(res, "waiting for header frame");
-	if (check_error(res, "waiting for header frame", g_info, RMQ_LOG_MAXSIZE)){
-		rmq_log_write(g_info, RMQ_ERROR);
+	if (check_error(res, "waiting for header frame", _buf, RMQ_LOG_MAXSIZE)){
+		rmq_log_write(_buf, RMQ_ERROR);
 		return -1;
 	}
 
 	if (frame.frame_type != AMQP_FRAME_HEADER) {
 		//die("expected header, got frame type 0x%X",frame.frame_type);
-		sprintf(g_info, "expected header, got frame type 0x%X",frame.frame_type);
-		rmq_log_write(g_info, RMQ_ERROR);
+		sprintf(_buf, "expected header, got frame type 0x%X",frame.frame_type);
+		rmq_log_write(_buf, RMQ_ERROR);
 		return -1;
 	}
 
@@ -212,26 +223,26 @@ int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t*
 		*props = (amqp_basic_properties_t *)frame.payload.properties.decoded;
 	}
 	else{
-		sprintf(g_info, "error to get properties for priority. class_id:%d",frame.payload.properties.class_id);
-		rmq_log_write(g_info, RMQ_WARNING);
+		sprintf(_buf, "error to get properties for priority. class_id:%d",frame.payload.properties.class_id);
+		rmq_log_write(_buf, RMQ_WARNING);
 	}
 
 	body_remaining = frame.payload.properties.body_size;
 	if (body_remaining > bodysize){
 			//die("current size:%d, exceed body defined size %d", frame.frame_type, QUEUE_ITEM_BODY_SIZE);
-			sprintf(g_info, "current size:%d, exceed body defined size %d", frame.frame_type, bodysize);
-			rmq_log_write(g_info, RMQ_ERROR);
+			sprintf(_buf, "current size:%d, exceed body defined size %d", frame.frame_type, bodysize);
+			rmq_log_write(_buf, RMQ_ERROR);
 			return -1;
 	}
 	while (body_remaining) {
 		res = amqp_simple_wait_frame(conn, &frame);
 		//die_amqp_error(res, "waiting for body frame");
-		if (check_error(res, "waiting for body frame", g_info, RMQ_LOG_MAXSIZE)) 
-			rmq_log_write(g_info, RMQ_ERROR);
+		if (check_error(res, "waiting for body frame", _buf, RMQ_LOG_MAXSIZE)) 
+			rmq_log_write(_buf, RMQ_ERROR);
 		if (frame.frame_type != AMQP_FRAME_BODY) {
 			//die("expected body, got frame type 0x%X", frame.frame_type);
-			sprintf(g_info, "expected body, got frame type 0x%X", frame.frame_type);
-			rmq_log_write(g_info, RMQ_ERROR);
+			sprintf(_buf, "expected body, got frame type 0x%X", frame.frame_type);
+			rmq_log_write(_buf, RMQ_ERROR);
 			return -1;
 		}
 
@@ -246,6 +257,7 @@ int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t*
 
 int rmq_get(const char *qname, void *buf, int bufsize/*size=QUEUE_ITEM_BODY_SIZE*/)
 {
+	char _buf[RMQ_LOG_MAXSIZE]; //big enough.
 	int ret;
 	amqp_rpc_reply_t t;
 	//char buf[QUEUE_ITEM_BODY_SIZE];
@@ -253,8 +265,8 @@ int rmq_get(const char *qname, void *buf, int bufsize/*size=QUEUE_ITEM_BODY_SIZE
 	//buf[0] = '\0';
 	t = amqp_basic_get(g_conn, 1, amqp_cstring_bytes(qname), 1);
 	//die_rpc(t, "basic.get");
-	if (check_amqp_error(t, "basic.get", g_info, RMQ_LOG_MAXSIZE)){
-		rmq_log_write(g_info, RMQ_ERROR);
+	if (check_amqp_error(t, "basic.get", _buf, RMQ_LOG_MAXSIZE)){
+		rmq_log_write(_buf, RMQ_ERROR);
 		return t.reply_type;
 	}
 
@@ -265,12 +277,13 @@ int rmq_get(const char *qname, void *buf, int bufsize/*size=QUEUE_ITEM_BODY_SIZE
 
 void rmq_exit()
 {
-	if (check_amqp_error(amqp_channel_close(g_conn, 1, AMQP_REPLY_SUCCESS), "Closing channel", g_info, RMQ_LOG_MAXSIZE))
-		rmq_log_write(g_info, RMQ_ERROR);
-	if (check_amqp_error(amqp_connection_close(g_conn, AMQP_REPLY_SUCCESS), "Closing connection", g_info, RMQ_LOG_MAXSIZE))
-		rmq_log_write(g_info, RMQ_ERROR);
-	if (check_error(amqp_destroy_connection(g_conn), "Ending connection", g_info, RMQ_LOG_MAXSIZE)) 
-		rmq_log_write(g_info, RMQ_ERROR);
+	char _buf[RMQ_LOG_MAXSIZE]; //big enough.
+	if (check_amqp_error(amqp_channel_close(g_conn, 1, AMQP_REPLY_SUCCESS), "Closing channel", _buf, RMQ_LOG_MAXSIZE))
+		rmq_log_write(_buf, RMQ_ERROR);
+	if (check_amqp_error(amqp_connection_close(g_conn, AMQP_REPLY_SUCCESS), "Closing connection", _buf, RMQ_LOG_MAXSIZE))
+		rmq_log_write(_buf, RMQ_ERROR);
+	if (check_error(amqp_destroy_connection(g_conn), "Ending connection", _buf, RMQ_LOG_MAXSIZE)) 
+		rmq_log_write(_buf, RMQ_ERROR);
 	rmq_log_write("close the channel successfully.", RMQ_INFO);
 }
 

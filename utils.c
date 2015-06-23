@@ -67,7 +67,7 @@ void die_on_error(int x, char const *context)
 int check_error(int x, char const *context, /*out*/char *errinfo, int maxsize)
 {
   if (x < 0)
-    snprintf(errinfo, maxsize-1, "%s: %s\n", context, amqp_error_string2(x));
+    snprintf(errinfo, maxsize-1, "%s: %s", context, amqp_error_string2(x));
   return x;
 }
 
@@ -120,18 +120,18 @@ int check_amqp_error(amqp_rpc_reply_t x, char const *context, /*out*/char *errin
     break;
 
   case AMQP_RESPONSE_NONE:
-    sprintf(errinfo, "%s: missing RPC reply type!\n", context);
+    sprintf(errinfo, "%s: missing RPC reply type!", context);
     return -1;
 
   case AMQP_RESPONSE_LIBRARY_EXCEPTION:
-    snprintf(errinfo, maxsize-1, "%s: %s\n", context, amqp_error_string2(x.library_error));
+    snprintf(errinfo, maxsize-1, "%s: %s", context, amqp_error_string2(x.library_error));
     return -1;
 
   case AMQP_RESPONSE_SERVER_EXCEPTION:
     switch (x.reply.id) {
     case AMQP_CONNECTION_CLOSE_METHOD: {
       amqp_connection_close_t *m = (amqp_connection_close_t *) x.reply.decoded;
-      snprintf(errinfo, maxsize-1, "%s: server connection error %d, message: %.*s\n",
+      snprintf(errinfo, maxsize-1, "%s: server connection error %d, message: %.*s",
               context,
               m->reply_code,
               (int) m->reply_text.len, (char *) m->reply_text.bytes);
@@ -139,14 +139,14 @@ int check_amqp_error(amqp_rpc_reply_t x, char const *context, /*out*/char *errin
     }
     case AMQP_CHANNEL_CLOSE_METHOD: {
       amqp_channel_close_t *m = (amqp_channel_close_t *) x.reply.decoded;
-      snprintf(errinfo, maxsize-1, "%s: server channel error %d, message: %.*s\n",
+      snprintf(errinfo, maxsize-1, "%s: server channel error %d, message: %.*s",
               context,
               m->reply_code,
               (int) m->reply_text.len, (char *) m->reply_text.bytes);
       return -1;
     }
     default:
-      snprintf(errinfo, maxsize-1, "%s: unknown server error, method id 0x%08X\n", context, x.reply.id);
+      snprintf(errinfo, maxsize-1, "%s: unknown server error, method id 0x%08X", context, x.reply.id);
       return -1;
     }
     break;
