@@ -12,5 +12,5 @@ and what's more, the output of priority queue have more selections which call 'e
 +rabbitmq version: 3.5.3
 +rabbitmq-c version: 0.6.0 
 +compile:
-gcc test.c -lrabbitmq utils.c rabbitmq_mgr.c rabbitmq_log.c
+g++ test.cpp utils.cpp rabbitmq_mgr.cpp rabbitmq_log.cpp -lrabbitmq
 
