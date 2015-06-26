@@ -28,16 +28,20 @@ BOOL rmq_exchange_queues_declare();
  */
 int rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen);
 
+#define AMQP_GET_TIMEOUT -1                //maybe empty queue.
+#define AMQP_GET_ERROR_HEADER -2           //header error
+#define AMQP_GET_ERROR_FRAME_TYPE -3       //frame type error.
+#define AMQP_GET_ERROR_BODYSIZE_EXCCEED -4 //frame type error.
 /*
  *get one item from queue with name qname.
  *return:
- * -1: get body from frame failed. 
+ * AMQP_GET_* above 
  * AMQP_RESPONSE_NONE = 0,         //< the library got an EOF from the socket 
  * AMQP_RESPONSE_NORMAL,           //< response normal, the RPC completed successfully 
  * AMQP_RESPONSE_LIBRARY_EXCEPTION,//< library error, an error occurred in the library, examine the library_error 
  * AMQP_RESPONSE_SERVER_EXCEPTION  //< server exception, the broker returned an error, check replay 
  */
-int rmq_get(const char *qname, void *buf, int buflen);
+int rmq_get(const char *qname, void *buf, int buflen, int &priority);
 
 /*
  *close channel and connection.

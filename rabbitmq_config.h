@@ -9,8 +9,12 @@
 #define FRAME_WAIT_TIMEOUT    12   //获取队列条目超时时间
 #define PRIORITY_MAX  10   //定义优先级范围(0到PRIORITY_MAX)，数字越大优先级越高.
 #define RECONNECT_TIME  3*3   //按照keepalived.conf上TCP_CHECK的配置，connect_timeout*nb_get_retry为重连时间
-#define RECONNECT_RETRY_TIMES  8
+
+#ifdef WIN32
+const char *log_path   = "log\\rabbitmq.log"; 
+#else
 const char *log_path   = "log/rabbitmq.log"; //独立的rabbitmq-c接口日志，可以通过rmq_log_set_handler使用自定义日志接口.
+#endif
 //end.
 
 
