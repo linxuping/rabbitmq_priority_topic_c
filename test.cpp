@@ -53,15 +53,15 @@ void test_send()
 void test_get()
 {
 	BOOL ret;
-	int i,ret2,priority;
+	int i,ret2,priority,len;
 	char buf[1024];
 
 	ret = rmq_init();
 	for(i=0; i>=0; ++i){
-		ret2 = rmq_get("linxpq1", buf,1024, priority);
-		printf("get from linxpq1: %d:%s pri:%d \n",ret2,buf,priority);
-		ret2 = rmq_get("test", buf,1024, priority);
-		printf("get from linxpq2: %d:%s pri:%d \n",ret2,buf,priority);
+		ret2 = rmq_get("linxpq1", buf,len,1024, priority);
+		printf("get from linxpq1: %d:%s pri:%d bodysize:%d \n",ret2,buf,priority,len);
+		ret2 = rmq_get("test", buf,len,1024, priority);
+		printf("get from linxpq2: %d:%s pri:%d bodysize:%d \n",ret2,buf,priority,len);
 		sleep(1);
 	}
 

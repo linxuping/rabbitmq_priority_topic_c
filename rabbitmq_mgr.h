@@ -41,7 +41,12 @@ int rmq_send(const char* exchange, int priority, const char* routing_key, const 
  * AMQP_RESPONSE_LIBRARY_EXCEPTION,//< library error, an error occurred in the library, examine the library_error 
  * AMQP_RESPONSE_SERVER_EXCEPTION  //< server exception, the broker returned an error, check replay 
  */
-int rmq_get(const char *qname, void *buf, int buflen, int &priority);
+int rmq_get(const char *qname, void *buf, int &buflen, int max_buflen, int &priority);
+
+/*
+ *get queue item size.
+ */
+uint32_t rmq_get_count(const char* qname);
 
 /*
  *close channel and connection.

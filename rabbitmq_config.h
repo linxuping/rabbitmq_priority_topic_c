@@ -19,7 +19,7 @@ const char *log_path   = "log/rabbitmq.log"; //独立的rabbitmq-c接口日志�
 
 
 //external.configs
-const char *rmq_hostname = "192.168.12.200";
+const char *rmq_hostname = "192.168.102.50";//12.200
 const int   rmq_port     = 5672;
 const char *rmq_username = "teiron";
 const char *rmq_passwd   = "teiron";

@@ -6,6 +6,7 @@ enum BOOL{
 	TRUE = 1,
 };
 typedef enum BOOL BOOL;
+typedef unsigned int uint32_t;
 #else
 #include <windows.h>
 #endif
