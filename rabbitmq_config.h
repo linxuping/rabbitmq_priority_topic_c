@@ -1,5 +1,6 @@
 /*
  *doc related: /resource_gather/rabbitmq/doc/数据协议.xlsx (汇总的详细的说明文档)
+ *rabbit-c interface is not thread-safe, just take care.
  */
 //internal.configs
 #define RMQ_ITEMS     8    //rmq_exchange_queues配置项{exchange,qname1,...}对应的数组最大size
