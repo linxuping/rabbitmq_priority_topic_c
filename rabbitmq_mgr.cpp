@@ -30,6 +30,45 @@
 struct timeval g_frame_wait_timeout;
 amqp_connection_state_t g_conn;
 
+#ifdef WIN32
+CRITICAL_SECTION  _critical;
+#else
+#include <pthread.h>  
+pthread_mutex_t   mutex_lock;
+#endif
+class _mq_lock_local{
+public:
+	_mq_lock_local(){ 
+#ifdef WIN32
+		EnterCriticalSection(&_critical); 
+#else
+		pthread_mutex_lock(&mutex_lock);
+#endif
+	}
+	~_mq_lock_local(){ 
+#ifdef WIN32
+		LeaveCriticalSection(&_critical); 
+#else
+		pthread_mutex_unlock(&mutex_lock);
+#endif
+	}
+
+	static void init(){
+#ifdef WIN32
+		InitializeCriticalSection(&_critical); 
+#else
+		pthread_mutex_init(&mutex_lock, NULL);
+#endif
+	}
+	static void exit(){
+#ifdef WIN32
+		DeleteCriticalSection(&_critical); 
+#else
+		pthread_mutex_lock(&mutex_lock);
+#endif
+	}
+};
+
 BOOL rmq_init()
 {
 	amqp_socket_t *socket;
@@ -71,6 +110,7 @@ BOOL rmq_init()
 	g_frame_wait_timeout.tv_usec = 0;
 
 	rmq_log_write("New channel and Login successfully.", RMQ_INFO);
+	_mq_lock_local::init();
 	return TRUE;
 }
 
@@ -155,6 +195,7 @@ amqp_bytes_t amqp_mystring_bytes(const void *buf, int len)
 
 int rmq_send(const char* exchange, int priority, const char* routing_key, const void* sendbuf, int sendlen)
 {
+	_mq_lock_local _mq_lock;
 	char _buf[RMQ_LOG_MAXSIZE],tmpbuf[128]; //big enough.
 	int status;
 	int i;
@@ -255,6 +296,7 @@ int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t*
 
 int rmq_get(const char *qname, void *buf, int &bodysize, int max_bufsize, int &priority)
 {
+	_mq_lock_local _mq_lock;
 	char _buf[RMQ_LOG_MAXSIZE],tmpbuf[128]; //big enough.
 	int ret,i;
 	amqp_rpc_reply_t t;
@@ -296,10 +338,12 @@ void rmq_exit()
 	if (check_error(amqp_destroy_connection(g_conn), "Ending connection", _buf, RMQ_LOG_MAXSIZE)) 
 		rmq_log_write(_buf, RMQ_ERROR);
 	rmq_log_write("close the channel successfully.", RMQ_INFO);
+	_mq_lock_local::exit();
 }
 
 uint32_t rmq_get_count(const char* qname)
 {
+	_mq_lock_local _mq_lock;
 	amqp_table_entry_t inner_entries[1];
 	amqp_table_t inner_table;
 	inner_entries[0].key = amqp_cstring_bytes("x-max-priority");
