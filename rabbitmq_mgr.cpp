@@ -310,7 +310,7 @@ int rmq_get(const char *qname, void *buf, int &bodysize, int max_bufsize, int &p
 	for (i=0; i<=RECONNECT_RETRY_TIMES; ++i){
 		if (i == RECONNECT_RETRY_TIMES)
 			return t.reply_type;
-		sprintf(tmpbuf, "basic.get.%d", i);
+		sprintf(tmpbuf, "basic.get, try to re-connect.%d", i);
 		if (check_amqp_error(t, tmpbuf, _buf, RMQ_LOG_MAXSIZE)){
 			rmq_log_write(_buf, RMQ_ERROR);
 			sleep(RECONNECT_TIME);
@@ -359,7 +359,7 @@ uint32_t rmq_get_count(const char* qname)
 	for (int i=0; i<=RECONNECT_RETRY_TIMES; ++i){
 		if (i == RECONNECT_RETRY_TIMES)
 			return 0;
-		sprintf(tmpbuf, "basic.rmq_get_count.%d", i);
+		sprintf(tmpbuf, "basic.rmq_get_count, try to re-connect.%d", i);
 		if (NULL == r){
 			rmq_log_write(tmpbuf, RMQ_ERROR);
 			sleep(RECONNECT_TIME);
