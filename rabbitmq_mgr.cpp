@@ -18,6 +18,8 @@
 #include "rabbitmq_mgr.h"
 #include "rabbitmq_log.h"
 
+#pragma comment(lib, "..\\base\\rabbitmq\\rabbitmq_s.lib")
+
 #ifndef WIN32
 #include <unistd.h>
 #include <sys/time.h>
@@ -338,7 +340,6 @@ void rmq_exit()
 	if (check_error(amqp_destroy_connection(g_conn), "Ending connection", _buf, RMQ_LOG_MAXSIZE)) 
 		rmq_log_write(_buf, RMQ_ERROR);
 	rmq_log_write("close the channel successfully.", RMQ_INFO);
-	_mq_lock_local::exit();
 }
 
 uint32_t rmq_get_count(const char* qname)
@@ -352,8 +353,24 @@ uint32_t rmq_get_count(const char* qname)
 	inner_table.num_entries = 1;
 	inner_table.entries = inner_entries;
 	amqp_bytes_t bqueuename = amqp_cstring_bytes(qname);
+	char tmpbuf[128];
 
 	amqp_queue_declare_ok_t* r = amqp_queue_declare(g_conn, 1, bqueuename, 0, 1, 0, 0, inner_table);
+	for (int i=0; i<=RECONNECT_RETRY_TIMES; ++i){
+		if (i == RECONNECT_RETRY_TIMES)
+			return 0;
+		sprintf(tmpbuf, "basic.rmq_get_count.%d", i);
+		if (NULL == r){
+			rmq_log_write(tmpbuf, RMQ_ERROR);
+			sleep(RECONNECT_TIME);
+			rmq_exit();
+			rmq_init();
+			r = amqp_queue_declare(g_conn, 1, bqueuename, 0, 1, 0, 0, inner_table);
+			continue;
+		}
+		else
+			break;
+	}
 	return r->message_count;
 }
 
