@@ -243,7 +243,7 @@ int rmq_send(const char* exchange, int priority, const char* routing_key, const 
 	return status;
 }
 
-int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t** props, int &bodysize, int max_bufsize)
+int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t** props, int &bodysize, int max_bufsize, const char* qname)
 {
 	char _buf[RMQ_LOG_MAXSIZE]; //big enough.
 	size_t body_remaining;
@@ -253,7 +253,9 @@ int fetch_body(amqp_connection_state_t conn, void *buf, amqp_basic_properties_t*
 	int res = amqp_simple_wait_frame_noblock(conn, &frame, &g_frame_wait_timeout);
 	//die_amqp_error(res, "waiting for header frame");
 	if (check_error(res, "waiting for header frame", _buf, RMQ_LOG_MAXSIZE)){
-		rmq_log_write(_buf, RMQ_ERROR);
+		if (!(AMQP_STATUS_TIMEOUT==res && rmq_get_count_nolock(qname)==0)){
+			rmq_log_write(_buf, RMQ_ERROR);
+		}
 		return AMQP_GET_TIMEOUT;
 	}
 
@@ -328,7 +330,7 @@ int rmq_get(const char *qname, void *buf, int &bodysize, int max_bufsize, int &p
 
 	memset(buf, 0, max_bufsize);
 	props = NULL;
-	ret = fetch_body(g_conn, buf, &props, bodysize, max_bufsize);
+	ret = fetch_body(g_conn, buf, &props, bodysize, max_bufsize, qname);
 	if (NULL != props) priority = props->priority;
 	return ret;
 }
@@ -345,9 +347,7 @@ void rmq_exit()
 	rmq_log_write("close the channel successfully.", RMQ_INFO);
 }
 
-uint32_t rmq_get_count(const char* qname)
-{
-	_mq_lock_local _mq_lock;
+uint32_t rmq_get_count_nolock(const char* qname){
 	amqp_table_entry_t inner_entries[1];
 	amqp_table_t inner_table;
 	inner_entries[0].key = amqp_cstring_bytes("x-max-priority");
@@ -375,5 +375,11 @@ uint32_t rmq_get_count(const char* qname)
 			break;
 	}
 	return r->message_count;
+}
+
+uint32_t rmq_get_count(const char* qname)
+{
+	_mq_lock_local _mq_lock;
+	return rmq_get_count_nolock(qname);
 }
 

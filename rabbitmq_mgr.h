@@ -46,6 +46,7 @@ int rmq_get(const char *qname, void *buf, int &buflen, int max_buflen, int &prio
 /*
  *get queue item size.
  */
+uint32_t rmq_get_count_nolock(const char* qname);
 uint32_t rmq_get_count(const char* qname);
 
 /*
