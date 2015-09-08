@@ -18,7 +18,7 @@
 #include "rabbitmq_mgr.h"
 #include "rabbitmq_log.h"
 
-#pragma comment(lib, "..\\base\\rabbitmq\\rabbitmq_s.lib")
+#pragma comment(lib, "rabbitmq_s.lib")
 
 #ifndef WIN32
 #include <unistd.h>
@@ -32,6 +32,7 @@
 struct timeval g_frame_wait_timeout;
 amqp_connection_state_t g_conn;
 
+volatile static bool g_lock_init = false;
 #ifdef WIN32
 CRITICAL_SECTION  _critical;
 #else
@@ -56,11 +57,13 @@ public:
 	}
 
 	static void init(){
+		if (g_lock_init) return;
 #ifdef WIN32
 		InitializeCriticalSection(&_critical); 
 #else
 		pthread_mutex_init(&mutex_lock, NULL);
 #endif
+		g_lock_init = true;
 	}
 	static void exit(){
 #ifdef WIN32
