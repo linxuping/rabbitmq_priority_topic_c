@@ -13,12 +13,18 @@
 void test_send();
 void test_get();
 
-int main()
+int main(int argc, char *argv[])
 {
-	//test_send();
-	test_get();
+	if (2 != argc){
+		printf("input like: ./a.out send(or recv) \n");
+		return 0;
+	}
+	if (strcmp(argv[1],"send") == 0)
+		test_send();
+	else
+		test_get();
 
-	printf("++ send finish.\n");
+	printf("++ q test finish.\n");
 	return 0;
 }
 
@@ -40,11 +46,13 @@ void test_send()
 	
 	do{
 		printf("sending...\n");
-		printf("ret:%d\n", rmq_send("apple_types", 10, "genuine.jailbreak", (void*)buf, strlen(buf)) );
-		printf("ret:%d\n", rmq_send("apple_types", 9, "genuine.jailbreak", (void*)buf, strlen(buf)) );
-		printf("ret:%d\n", rmq_send("apple_types", 8, "genuine", (void*)buf, strlen(buf)) );
-		printf("ret:%d\n", rmq_send("apple_types", 7, "genuine", (void*)buf, strlen(buf)) );
-		printf("ret:%d\n", rmq_send("apple_types", 10, "genuine", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", 10, "testq1.testq2", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", 9, "testq1.testq2", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", 5, "testq1", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", 0, "testq1", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", -1, "testq1", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", 100, "testq1", (void*)buf, strlen(buf)) );
+		sleep(1);
 	}while(1);
 
 	rmq_exit();
@@ -58,15 +66,41 @@ void test_get()
 
 	ret = rmq_init();
 	for(i=0; i>=0; ++i){
-		ret2 = rmq_get("linxpq1", buf,len,1024, priority);
-		printf("get from linxpq1: %d:%s pri:%d bodysize:%d \n",ret2,buf,priority,len);
-		ret2 = rmq_get("test", buf,len,1024, priority);
-		printf("get from linxpq2: %d:%s pri:%d bodysize:%d \n",ret2,buf,priority,len);
-		sleep(1);
+		ret2 = rmq_get("testq1", buf,len,1024, priority);
+		printf("get from testq1: %d:%s pri:%d bodysize:%d \n",ret2,buf,priority,len);
+		//ret2 = rmq_get("testq1", buf,len,1024, priority);
+		//printf("get from testq2: %d:%s pri:%d bodysize:%d \n",ret2,buf,priority,len);
+		//sleep(1);
 	}
 
 	rmq_exit();
 }
 
-
+/*output: 
+linxp@ubuntu:~/pp/svn/resource_gather/base/rabbitmq$ ./a.out recv
+get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29   -1 -> 255
+get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29   0 -> min
+get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29
+*/
 

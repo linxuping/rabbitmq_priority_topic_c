@@ -44,6 +44,7 @@ const char* g_q_jb_blktest     = "jb_blktest";
 
 const char rmq_exchange_queues[][RMQ_ITEMS][RMQ_ITEM_SIZE] = { 
 	{"app_collect", "app_update", "ges_down", "gem_down", "jb_down", "ge_rawpkg", "ges_buy", "jb_crack", "jb_blktest"},
+	{"testexchange", "testq1", "testq2"},
 };
 const char rmq_topics[][RMQ_ITEMS][RMQ_ITEM_SIZE] = { 
 	//{qname, topic1, topic2 ...}
@@ -55,6 +56,9 @@ const char rmq_topics[][RMQ_ITEMS][RMQ_ITEM_SIZE] = {
 	{"ges_buy",  "ges_buy"},       //正版多账号 组购买签名文件并上传包
 	{"jb_crack", "jb_crack"},      //越狱破解
 	{"jb_blktest", "jb_blktest"},  //越狱闪退测试
+
+	{"testq1", "testq1.#"},          //test queue
+	{"testq2", "#.testq2"},          //test queue
 };
 //end.
 
