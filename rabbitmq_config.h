@@ -26,8 +26,8 @@ const char *log_path   = "log/rabbitmq.log"; //独立的rabbitmq-c接口日志�
 //external.configs
 const char *rmq_hostname = "192.168.12.200";//
 const int   rmq_port     = 5672;
-const char *rmq_username = "";
-const char *rmq_passwd   = "";
+const char *rmq_username = "teiron";
+const char *rmq_passwd   = "teiron";
 const int  rmq_heartbeat = 60;//Detecting Dead TCP Connections
 
 //按照rabbitmq协议，当发送到队列，先根据约定的exchange进行路由，再根据topic的匹配规则路由到最终的queue,

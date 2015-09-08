@@ -50,8 +50,9 @@ void test_send()
 		printf("ret:%d\n", rmq_send("testexchange", 9, "testq1.testq2", (void*)buf, strlen(buf)) );
 		printf("ret:%d\n", rmq_send("testexchange", 5, "testq1", (void*)buf, strlen(buf)) );
 		printf("ret:%d\n", rmq_send("testexchange", 0, "testq1", (void*)buf, strlen(buf)) );
-		printf("ret:%d\n", rmq_send("testexchange", -1, "testq1", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", -2, "testq1", (void*)buf, strlen(buf)) );
 		printf("ret:%d\n", rmq_send("testexchange", 100, "testq1", (void*)buf, strlen(buf)) );
+		printf("ret:%d\n", rmq_send("testexchange", 10000, "testq1", (void*)buf, strlen(buf)) );
 		sleep(1);
 	}while(1);
 
@@ -76,31 +77,20 @@ void test_get()
 	rmq_exit();
 }
 
-/*output: 
-linxp@ubuntu:~/pp/svn/resource_gather/base/rabbitmq$ ./a.out recv
+/*priority test: 
+get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29  
+get from testq1: 1:it is zb.yy, high priority=10 pri:254 bodysize:29    -2 -> 254 
+get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29    100 
+get from testq1: 1:it is zb.yy, high priority=10 pri:16 bodysize:29     10000 -> (0001 0000) -> 16
 get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29   -1 -> 255
+get from testq1: 1:it is zb.yy, high priority=10 pri:254 bodysize:29 
 get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:10 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:255 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:100 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:16 bodysize:29 
 get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
 get from testq1: 1:it is zb.yy, high priority=10 pri:9 bodysize:29 
 get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
 get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:5 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29 
-get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29   0 -> min
-get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29 
+get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29      0 
 get from testq1: 1:it is zb.yy, high priority=10 pri:0 bodysize:29
 */
 
